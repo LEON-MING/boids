@@ -58,10 +58,12 @@ var Boid = function(parent, position, velocity, size, colour) {
 Boid.prototype.draw = function () {
   // Draw boid
   this.parent.ctx.beginPath();
-  this.parent.ctx.fillStyle = this.colour;
+  this.parent.ctx.fillStyle = '#ffffff';
+  this.parent.ctx.strokeStyle = this.colour;
   this.parent.ctx.globalAlpha = 0.7;
   this.parent.ctx.arc(this.position.x, this.position.y, this.parent.boidRadius * this.size, 0, 2 * Math.PI);
   this.parent.ctx.fill();
+  this.parent.ctx.stroke();
 };
 
 /* Update the boid positions according to Reynold's rules.
