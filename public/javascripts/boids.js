@@ -39,7 +39,7 @@ Vector.prototype.limit = function(limit) {
 };
 
 // INDIVIDUAL BOID CLASS
-var Boid = function(parent, position, velocity, size, colour) {
+var Boid = function(parent, position, velocity, size, colour, image, imageFlipped) {
   // Initialise the boid parameters
   this.position = new Vector(position.x, position.y);
   this.velocity = new Vector(velocity.x, velocity.y);
@@ -53,44 +53,92 @@ var Boid = function(parent, position, velocity, size, colour) {
   this.size = size;
   this.colour = colour;
   this.parent = parent;
+  this.actualSize = this.size * this.parent.boidRadius;
+
+  // Sprite attributes
+  this.tickCount = 0;
+  this.ticksPerFrame = 2;
+  this.numberOfFrames = 9;
+  this.imageWidth = 900;
+  this.imageHeight = 100;
+  this.frameIndex = Math.floor(Math.random()*(this.numberOfFrames+1));
+  this.image = image;
+  this.imageFlipped = imageFlipped;
+
 };
 
 Boid.prototype.draw = function () {
   // Draw boid
-  this.parent.ctx.beginPath();
-  this.parent.ctx.fillStyle = '#ffffff';
-  this.parent.ctx.strokeStyle = this.colour;
-  this.parent.ctx.globalAlpha = 0.7;
-  this.parent.ctx.arc(this.position.x, this.position.y, this.parent.boidRadius * this.size, 0, 2 * Math.PI);
-  this.parent.ctx.fill();
-  this.parent.ctx.stroke();
+  // this.parent.ctx.beginPath();
+  // this.parent.ctx.fillStyle = '#ffffff';
+  // this.parent.ctx.strokeStyle = this.colour;
+  // this.parent.ctx.globalAlpha = 0.7;
+  // this.parent.ctx.arc(this.position.x, this.position.y, this.parent.boidRadius * this.size, 0, 2 * Math.PI);
+  // this.parent.ctx.fill();
+  // this.parent.ctx.stroke();
+    var image;
+    if (this.velocity.x >= 0) {
+        image = this.image;
+    } else {
+        image = this.imageFlipped;
+    }
+    this.parent.ctx.drawImage(
+        image,
+        this.frameIndex * this.imageWidth / this.numberOfFrames,
+        0,
+        this.imageWidth / this.numberOfFrames,
+        this.imageHeight,
+        this.position.x,
+        this.position.y,
+        this.actualSize,
+        this.actualSize
+    );
+
 };
 
 /* Update the boid positions according to Reynold's rules.
 ** Called on every frame  */
 Boid.prototype.update = function () {
-  var v1 = this.cohesion();
-  var v2 = this.separation();
-  var v3 = this.alignment();
-  var v4 = this.interactivity();
+    if (this.parent.move) {
+        var v1 = this.cohesion();
+        var v2 = this.separation();
+        var v3 = this.alignment();
+        var v4 = this.interactivity();
 
-  // Weight rules to get best behaviour
-  v1 = v1.mul(new Vector(1, 1));
-  v2 = v2.mul(new Vector(1.5, 1.5));
-  v3 = v3.mul(new Vector(1, 1));
-  v4 = v4.mul(new Vector(1.8, 1.8));
+        // Weight rules to get best behaviour
+        v1 = v1.mul(new Vector(0.8, 0.8));
+        v2 = v2.mul(new Vector(2, 2));
+        v3 = v3.mul(new Vector(0.8, 0.8));
+        v4 = v4.mul(new Vector(2.2, 2.2));
 
-  this.applyForce(v1);
-  this.applyForce(v2);
-  this.applyForce(v3);
-  this.applyForce(v4);
+        this.applyForce(v1);
+        this.applyForce(v2);
+        this.applyForce(v3);
+        this.applyForce(v4);
 
-  this.velocity = this.velocity.add(this.acceleration);
-  this.velocity = this.velocity.limit(this.parent.options.speed);
+        this.velocity = this.velocity.add(this.acceleration);
+        this.velocity = this.velocity.limit(this.parent.options.speed);
 
-  this.position = this.position.add(this.velocity);
-  this.acceleration = this.acceleration.mul(new Vector(0, 0));
-  this.borders();
+        this.position = this.position.add(this.velocity);
+        this.acceleration = this.acceleration.mul(new Vector(0, 0));
+        this.borders();
+    }
+
+    // Sprite handling
+    this.tickCount += 1;
+
+    if (this.tickCount > this.ticksPerFrame) {
+        this.tickCount = 0;
+
+        // If the current frame index is in range
+        if (this.frameIndex < this.numberOfFrames - 1) {
+            // Go to the next frame
+            this.frameIndex += 1;
+        } else {
+            this.frameIndex = 0;
+        }
+    }
+
 };
 
 // BOIDS FLOCKING RULES
@@ -191,10 +239,16 @@ Boid.prototype.interactivity = function () {
 
 // Implement torus boundaries
 Boid.prototype.borders = function() {
-  if(this.position.x < 0) this.velocity.x = -this.velocity.x;
-  if(this.position.y < 0) this.velocity.y = -this.velocity.y;
-  if(this.position.x > this.parent.canvas.width) this.velocity.x = -this.velocity.x;
-  if(this.position.y > this.parent.canvas.height) this.velocity.y = -this.velocity.y;
+    // OPTION 1: Bounce off walls
+    // if(this.position.x < 0) this.velocity.x = -this.velocity.x;
+    // if(this.position.y < 0) this.velocity.y = -this.velocity.y;
+    // if(this.position.x > this.parent.canvas.width) this.velocity.x = -this.velocity.x;
+    // if(this.position.y > this.parent.canvas.height) this.velocity.y = -this.velocity.y;
+    // OPTION 2: Fly through walls
+    if(this.position.x + this.actualSize < 0) this.position.x = this.parent.canvas.width;
+    if(this.position.y + this.actualSize < 0) this.position.y = this.parent.canvas.height;
+    if(this.position.x > this.parent.canvas.width) this.position.x = 0;
+    if(this.position.y > this.parent.canvas.height) this.position.y = 0;
 };
 
 /* Calculate a force to apply to a boid to steer
@@ -235,10 +289,11 @@ var BoidsCanvas = function(canvas, options) {
   };
 
   // Internal boids parameters
-  this.visibleRadius = 400;
+  this.visibleRadius = 600;
   this.maxForce = 0.05;
   this.separationDist = 200;
-  this.boidRadius = 3;  //size of the smallest boid
+  this.boidRadius = 30;  //size of the smallest boid
+  this.move = false;
 
   this.init();
 };
@@ -254,7 +309,7 @@ BoidsCanvas.prototype.init = function() {
     'left': 0,
     'bottom': 0,
     'right': 0,
-    'z-index': -1
+    'z-index': 1
   });
 
   // Check if valid background hex color
@@ -313,24 +368,51 @@ BoidsCanvas.prototype.init = function() {
     this.mousePos = undefined;
   }.bind(this));
 
+  this.canvasDiv.onclick = function () {
+     this.move = !(this.move);
+  }.bind(this);
+
   // Update canvas
   requestAnimationFrame(this.update.bind(this));
 };
 
 // Initialise boids according to options
 BoidsCanvas.prototype.initialiseBoids = function() {
-  this.boids = [];
-  for(var i = 0; i < this.canvas.width * this.canvas.height / this.options.density; i++) {
-    var position = new Vector(Math.floor(Math.random()*(this.canvas.width+1)),
-                              Math.floor(Math.random()*(this.canvas.height+1)));
-    var max_velocity = 5;
-    var min_velocity = -5;
-    var velocity = new Vector(Math.floor(Math.random()*(max_velocity-min_velocity+1)+min_velocity),
-                              Math.floor(Math.random()*(max_velocity-min_velocity+1)+min_velocity));
-    var size = (this.options.mixedSizes) ? Math.floor(Math.random()*(3-1+1)+1) : 1;
-    var colourIdx = Math.floor(Math.random()*(this.options.boidColours.length-1+1));
-    this.boids.push(new Boid(this, position, velocity, size, this.options.boidColours[colourIdx]));
-  }
+    this.boids = [];
+    var cW = this.canvas.width;
+    var cH = this.canvas.height;
+    function el_constraints(position) {
+        if (((cW * 0.35 <= position.x && position.x <= cW * 0.45) && (cH * 0.2 <= position.y && position.y <= cH * 0.8)) ||
+            ((cW * 0.45 <= position.x && position.x <= cW * 0.65) && (cH * 0.6 <= position.y && position.y <= cH * 0.8))) {
+            return true;
+        } else {
+            return false;
+        }
+    };
+    for(var i = 0; i < this.canvas.width * this.canvas.height / this.options.density; i++) {
+        var position = new Vector(Math.floor(Math.random()*(this.canvas.width+1)),
+                                    Math.floor(Math.random()*(this.canvas.height+1)));
+        while (!(el_constraints(position))) {
+            position = new Vector(Math.floor(Math.random()*(this.canvas.width+1)),
+                                    Math.floor(Math.random()*(this.canvas.height+1)));
+        }
+        var max_velocity = 0.1;
+        var min_velocity = -0.1;
+        var velocity = new Vector(Math.floor(Math.random()*(max_velocity-min_velocity+1)+min_velocity),
+                                  Math.floor(Math.random()*(max_velocity-min_velocity+1)+min_velocity));
+        var size = (this.options.mixedSizes) ? Math.floor(Math.random()*(3-1+1)+1) : 1;
+        var colourIdx = Math.floor(Math.random()*(this.options.boidColours.length-1+1));
+
+        var boidImage = new Image();
+
+        boidImage.src = "/boid-sprite.png";
+
+        var boidImageFlipped = new Image();
+
+        boidImageFlipped.src = "/boid-sprite-flipped.png";
+
+        this.boids.push(new Boid(this, position, velocity, size, this.options.boidColours[colourIdx], boidImage, boidImageFlipped));
+    }
 };
 
 BoidsCanvas.prototype.update = function() {
