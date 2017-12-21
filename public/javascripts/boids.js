@@ -106,9 +106,9 @@ Boid.prototype.update = function () {
         var v4 = this.interactivity();
 
         // Weight rules to get best behaviour
-        v1 = v1.mul(new Vector(0.8, 0.8));
+        v1 = v1.mul(new Vector(0.5, 0.5));
         v2 = v2.mul(new Vector(2, 2));
-        v3 = v3.mul(new Vector(0.8, 0.8));
+        v3 = v3.mul(new Vector(1, 1));
         v4 = v4.mul(new Vector(2.2, 2.2));
 
         this.applyForce(v1);
