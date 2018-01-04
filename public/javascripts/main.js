@@ -1,6 +1,6 @@
 var options = {
   background: '#ffffff',
-  density: 'high',
+  density: 'medium',
   speed: 'fast',
   interactive: true,
   mixedSizes: false,
